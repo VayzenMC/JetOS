@@ -12,6 +12,7 @@ global start
 extern kmain
 
 start:
+    cli
     push ebx
     push eax
     call kmain

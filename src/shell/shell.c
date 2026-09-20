@@ -71,7 +71,7 @@ void shell_main() {
                     list_add_string(&screen_list, "USHBU OS MICROSOFT DEGAN JMOTGA TEGISHLI EMAS!", current_row, 12, 0x1F);
                     current_row++;
         } else if (my_strcmp(cmd, "dirs") == 0) {
-                const char *directory = DIRECTORY_BUFFER;
+            const char *directory = DIRECTORY_BUFFER;
                 list_add_string(&screen_list, "Directory:", current_row, 2, 0x1E);
                 current_row++;
                 list_add_string(&screen_list, directory, current_row, 4, 0x0F);

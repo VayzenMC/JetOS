@@ -1,4 +1,6 @@
 #include "iso9660.h"
+#include "interrupts.h"
+#include "vm.h"
 
 typedef void (*shell_entry_t)(void);
 
@@ -29,13 +31,22 @@ static void print_at(const char *message, int row, unsigned char color)
 
 void kmain(unsigned int magic, unsigned int addr)
 {
-    unsigned char *shell = (unsigned char *)0x200000;
+    unsigned char *shell;
     int shell_size;
 
     (void)addr;
     screen_clear();
     if (magic != 0x2BADB002) {
         print_at("JetOS: invalid multiboot magic", 0, 0x0C);
+        for (;;) __asm__ volatile("hlt");
+    }
+
+    vm_init();
+    interrupts_init();
+
+    shell = (unsigned char *)vm_alloc_pages(0x100000 / VM_PAGE_SIZE);
+    if (!shell) {
+        print_at("JetOS: unable to allocate user memory", 1, 0x0C);
         for (;;) __asm__ volatile("hlt");
     }
 

@@ -3,7 +3,7 @@ ENTRY(shell_main)
 
 SECTIONS
 {
-    . = 2M; /* Kernel 1MB da, shell esa 2MB da joylashadi */
+    . = 0x40000000; /* Shell user virtual address space'da ishlaydi. */
     .text : { *(.text) }
     .rodata : { *(.rodata) }
     .data : { *(.data) }
