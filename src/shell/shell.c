@@ -51,6 +51,8 @@ void render_frame(TextList *list, unsigned char bg_color);
 int my_strlen(const char *str);
 char* get_input(TextList *list, char *buffer, int max_len, int *current_row);
 int my_strcmp(const char *s1, const char *s2);
+int my_starts_with(const char *text, const char *prefix);
+void print_command_output(TextList *list, const char *text, int *current_row, unsigned char color);
 
 // --- 1. ENTRY POINT ---
 void shell_main() {
@@ -67,18 +69,33 @@ void shell_main() {
     while (1) {
         // get_input ishlaydi va Enter bosilganda tayyor string qaytaradi
         char *cmd = get_input(&screen_list, command_buffer, 64, &current_row);
-        if (my_strcmp(cmd, "jetos") == 0) {
-                    list_add_string(&screen_list, "USHBU OS MICROSOFT DEGAN JMOTGA TEGISHLI EMAS!", current_row, 12, 0x1F);
-                    current_row++;
-        } else if (my_strcmp(cmd, "dirs") == 0) {
+        if (my_strcmp(cmd, "help") == 0) {
+            print_command_output(&screen_list, "help  clear  about  version", &current_row, 0x0B);
+            print_command_output(&screen_list, "ls    dirs   echo TEXT  jetos", &current_row, 0x0B);
+        } else if (my_strcmp(cmd, "clear") == 0) {
+            list_clear(&screen_list);
+            current_row = 1;
+            list_add_string_center(&screen_list, "JETOS JETSHELL", current_row, 0x9F);
+            current_row++;
+        } else if (my_strcmp(cmd, "about") == 0) {
+            print_command_output(&screen_list, "JetOS 2.1 - x86 protected mode operating system", &current_row, 0x0F);
+            print_command_output(&screen_list, "Kernel, paging, ISO9660 and interactive JetShell", &current_row, 0x0F);
+        } else if (my_strcmp(cmd, "version") == 0) {
+            print_command_output(&screen_list, "JetOS version 2.1", &current_row, 0x0E);
+        } else if (my_strcmp(cmd, "jetos") == 0) {
+            print_command_output(&screen_list, "JetOS: kichik, mustaqil x86 operatsion tizimi", &current_row, 0x1F);
+        } else if (my_strcmp(cmd, "ls") == 0 || my_strcmp(cmd, "dirs") == 0) {
             const char *directory = DIRECTORY_BUFFER;
-                list_add_string(&screen_list, "Directory:", current_row, 2, 0x1E);
-                current_row++;
-                list_add_string(&screen_list, directory, current_row, 4, 0x0F);
-                while (*directory != '\0') {
-                    if (*directory == '\n') current_row++;
-                    ++directory;
-                }
+            print_command_output(&screen_list, "Directory:", &current_row, 0x1E);
+            list_add_string(&screen_list, directory, current_row, 4, 0x0F);
+            while (*directory != '\0') {
+                if (*directory == '\n') current_row++;
+                ++directory;
+            }
+        } else if (my_starts_with(cmd, "echo ") && cmd[5] != '\0') {
+            print_command_output(&screen_list, cmd + 5, &current_row, 0x0F);
+        } else if (cmd[0] != '\0') {
+            print_command_output(&screen_list, "Buyruq topilmadi. 'help' yozing.", &current_row, 0x0C);
         }
         // Bu yerda cmd ni buyruqlar jadvali uchun tekshirishingiz mumkin
         // Masalan: if (my_strcmp(cmd, "help") == 0) { ... }
@@ -228,7 +245,7 @@ void list_add_string_center(TextList *list, const char *str, int row, unsigned c
 
 void screen_clear(unsigned char bg_color) {
     unsigned char *video_memory = (unsigned char *) VGA_ADDRESS;
-    unsigned char attribute = 0x9F;
+    unsigned char attribute = (unsigned char)((bg_color << 4) | 0x0F);
     for (int i = 0; i < VGA_WIDTH * VGA_HEIGHT * 2; i += 2) {
         video_memory[i]     = ' ';
         video_memory[i + 1] = attribute;
@@ -262,4 +279,28 @@ int my_strcmp(const char *s1, const char *s2) {
         i++;
     }
     return s1[i] - s2[i];
+}
+
+int my_starts_with(const char *text, const char *prefix) {
+    while (*prefix != '\0') {
+        if (*text != *prefix) return 0;
+        ++text;
+        ++prefix;
+    }
+    return 1;
+}
+
+void print_command_output(TextList *list, const char *text, int *current_row, unsigned char color) {
+    list_add_string(list, text, *current_row, 2, color);
+    ++(*current_row);
+    if (*current_row >= VGA_HEIGHT) {
+        int i;
+        int valid_count = 0;
+        for (i = 0; i < list->count; ++i) {
+            --list->items[i].row;
+            if (list->items[i].row >= 0) list->items[valid_count++] = list->items[i];
+        }
+        list->count = valid_count;
+        *current_row = VGA_HEIGHT - 1;
+    }
 }

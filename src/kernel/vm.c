@@ -80,9 +80,24 @@ int vm_map_page(unsigned int virtual_address, unsigned int physical_address,
     return 0;
 }
 
+static void vm_clear_page(unsigned int virtual_address)
+{
+    unsigned int directory_index = virtual_address >> 22;
+    unsigned int table_address = page_directory[directory_index] & 0xFFFFF000U;
+    unsigned int *table;
+    unsigned int index;
+
+    if (table_address == 0) return;
+    table = (unsigned int *)table_address;
+    index = (virtual_address >> 12) & 0x3FF;
+    table[index] = 0;
+    __asm__ volatile("invlpg (%0)" : : "r"(virtual_address) : "memory");
+}
+
 void *vm_alloc_pages(unsigned int page_count)
 {
     unsigned int virtual_address = next_virtual;
+    unsigned int first_frame = next_frame;
     unsigned int i;
 
     if (page_count == 0 || page_count > 0x100000U / VM_PAGE_SIZE
@@ -90,8 +105,14 @@ void *vm_alloc_pages(unsigned int page_count)
         return 0;
     for (i = 0; i < page_count; ++i) {
         if (vm_map_page(virtual_address + i * VM_PAGE_SIZE, next_frame,
-                        1, 1) < 0)
+                        1, 1) < 0) {
+            while (i != 0) {
+                --i;
+                vm_clear_page(virtual_address + i * VM_PAGE_SIZE);
+            }
+            next_frame = first_frame;
             return 0;
+        }
         next_frame += VM_PAGE_SIZE;
     }
     next_virtual += page_count * VM_PAGE_SIZE;
